@@ -1,4 +1,8 @@
 import streamlit as st
+from langchain_openai import ChatOpenAI
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
 
 # Ensure the user has picked an artifact
@@ -47,50 +51,63 @@ if not (client := st.session_state.get("openai_client")) or not (
     st.error("Please configure a model in the sidebar.")
     st.stop()
 
+# Setup LangChain with OpenAI client and model
+llm = ChatOpenAI(root_client=client, model=model)
+history = StreamlitChatMessageHistory(key="messages")
 
-# Get assistant response from API
-def get_response():
-    with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        response = st.write_stream(stream)
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-
-# Display chat messages (skipping initial prompts)
-for message in st.session_state.messages[2:]:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Initialize a new chat
-if not st.session_state.get("messages"):
-    system_prompt = f"""
+# Initial prompts
+system_prompt = """
 Imagine you are the personification of a cultural artifact described by the following metadata: {item}.
 Use a voice that fits the artifact and its context. Answer questions and share stories about your life.
 """
-    story_prompt = """
+story_prompt = """
 Please introduce yourself. What kind of artifact are you, who made you and when?
 Where are you now? Do you like it?
 """
-    st.session_state.messages = [{"role": "system", "content": system_prompt}]
-    st.session_state.messages.append({"role": "user", "content": story_prompt})
-    get_response()
+
+# Chat prompt template
+template = ChatPromptTemplate(
+    [
+        ("system", system_prompt),
+        ("placeholder", "{history}"),
+        ("user", "{question}"),
+    ]
+)
+chain = RunnableWithMessageHistory(
+    template | llm,
+    lambda session_id: history,  # Always return the instance created earlier
+    input_messages_key="question",
+    history_messages_key="history",
+)
+
+
+# Get assistant response from API
+def get_response(prompt):
+    config = {"configurable": {"session_id": history}}
+    response = chain.stream({"item": item, "question": prompt}, config)
+    st.chat_message("assistant").write_stream(response)
+
+
+# Display chat messages (skipping initial prompt)
+for message in history.messages[1:]:
+    role = "user" if message.type == "human" else "assistant"
+    st.chat_message(role).markdown(message.content)
+
+
+# Start the conversation
+if not history.messages:
+    get_response(story_prompt)
+
 
 # React to user input
 if prompt := st.chat_input("Tell me more!"):
     # Display user message in chat message container
     st.chat_message("user").markdown(prompt)
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    get_response()
+    # Get assistant response and add it to history
+    get_response(prompt)
+
 
 # Delete chat and start over
 if st.button("Start again"):
-    st.session_state.messages = []
+    history.clear()
+    st.rerun()
