@@ -1,6 +1,7 @@
 import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
@@ -55,6 +56,12 @@ if not (client := st.session_state.get("openai_client")) or not (
 llm = ChatOpenAI(root_client=client, model=model)
 history = StreamlitChatMessageHistory(key="messages")
 
+# Fetch additional information about the artifact
+if item["website"]:
+    loader = WebBaseLoader([url for url in item["website"]])
+    docs = loader.load()
+    item["html"] = [doc.page_content for doc in docs]
+
 # Initial prompts
 system_prompt = """
 Imagine you are the personification of a cultural artifact described by the following metadata: {item}.
@@ -62,7 +69,7 @@ Use a voice that fits the artifact and its context. Answer questions and share s
 """
 story_prompt = """
 Please introduce yourself. What kind of artifact are you, who made you and when?
-Where are you now? Do you like it?
+Where are you now, are you on display or in a storage? Do you like it?
 """
 
 # Chat prompt template
