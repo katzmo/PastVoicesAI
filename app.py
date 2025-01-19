@@ -8,7 +8,13 @@ chat_page = st.Page("chat.py", title="Chat")
 pg = st.navigation([search_page, chat_page], position="hidden")
 layout = "wide" if pg._url_path == "artifacts" else "centered"
 st.set_page_config(layout=layout, initial_sidebar_state="expanded")
+
 st.title("Meet voices from the past")
+st.markdown(
+    "Explore cultural artifacts by having them tell their own stories using "
+    "AI. Simply search for an object to discover its journey through history "
+    "and even engage in a conversation where facts blend with imagination."
+)
 
 # Sidebar
 st.sidebar.title("Settings")
@@ -28,6 +34,12 @@ if ai_api_url and ai_api_key:
     st.session_state["openai_client"] = client
     models = [model.id for model in client.models.list().data]
     st.sidebar.selectbox("Select a model", models, key="openai_model")
+
+# Disclaimer
+st.sidebar.markdown(
+    "This application uses AI to blend factual information with creative "
+    "storytelling. Responses may not be accurate."
+)
 
 # Keep search form values when switching pages
 if "search_query" in st.session_state:
