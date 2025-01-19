@@ -11,7 +11,7 @@ def get_lang_or_any(map, lang="en"):
 def clean_data(item):
     return {
         "title": get_lang_or_any(item.get("dcTitleLangAware")) or ["???"],
-        "creator": get_lang_or_any(item.get("edmAgentLabelLangAware"))
+        "agent": get_lang_or_any(item.get("edmAgentLabelLangAware"))
         or get_lang_or_any(item.get("dcCreatorLangAware")),
         "description": get_lang_or_any(item.get("dcDescriptionLangAware")),
         "concept": get_lang_or_any(item.get("edmConceptPrefLabelLangAware")),

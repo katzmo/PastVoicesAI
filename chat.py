@@ -20,10 +20,10 @@ for preview in item["preview"]:
 if item["concept"]:
     right.caption("What?")
     right.write(", ".join(item["concept"]))
-if item["creator"]:
+if item["agent"]:
     right.caption("Who?")
-    for creator in item["creator"]:
-        right.write(creator)
+    for agent in item["agent"]:
+        right.write(agent)
 if item["year"]:
     right.caption("When?")
     for year in item["year"]:
@@ -38,6 +38,7 @@ if item["description"]:
         right.write(description)
 if item["website"]:
     right.link_button("Visit website", item["website"][0])
+
 
 # Ensure the user has configured the OpenAI API
 if not (client := st.session_state.get("openai_client")) or not (
